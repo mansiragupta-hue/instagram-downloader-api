@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import requests
+import yt_dlp
 
 app = Flask(__name__)
 
@@ -7,7 +7,7 @@ app = Flask(__name__)
 def home():
     return jsonify({
         "status": True,
-        "message": "Instagram Media API Running"
+        "message": "Instagram Downloader API Running"
     })
 
 @app.route("/download")
@@ -17,19 +17,29 @@ def download():
     if not url:
         return jsonify({
             "status": False,
-            "message": "URL parameter missing"
+            "message": "URL required"
         })
 
-    api_url = "https://instagram-media-api.p.rapidapi.com/media"
-
-    headers = {
-        "X-RapidAPI-Key": "YOUR_RAPIDAPI_KEY",
-        "X-RapidAPI-Host": "instagram-media-api.p.rapidapi.com"
+    ydl_opts = {
+        'quiet': True,
+        'skip_download': True,
+        'forcejson': True,
     }
 
-    response = requests.get(api_url, headers=headers, params={"url": url})
-
-    return jsonify(response.json())
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return jsonify({
+                "status": True,
+                "title": info.get("title"),
+                "thumbnail": info.get("thumbnail"),
+                "video_url": info.get("url")
+            })
+    except Exception as e:
+        return jsonify({
+            "status": False,
+            "error": str(e)
+        })
 
 if __name__ == "__main__":
     app.run()
